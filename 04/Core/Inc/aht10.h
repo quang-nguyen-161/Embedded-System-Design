@@ -1,0 +1,33 @@
+/*
+ * AHT10.h
+ *
+ *  Created on: Nov 6, 2025
+ *      Author: Windows
+ */
+
+#ifndef INC_AHT10_H_
+#define INC_AHT10_H_
+
+#include "main.h"
+#include <stdint.h>
+
+#define AHT10_ADDRESS 		0X38<<1
+#define AHT10_INIT 	  		0xAC
+#define AHT10_SOFT_RESET	0xBA
+
+
+typedef struct
+{
+	// sensor data = real data *100 to prevent using float
+	uint16_t humidity;
+	uint16_t temp;
+	uint16_t soil_moisture;
+} sensor_typedef;
+
+
+int aht10_get_data(sensor_typedef *m_sensor);
+uint16_t adc_get();
+uint16_t moisture_get(
+                      uint32_t MOISTURE_DRY,
+                      uint32_t MOISTURE_WET, sensor_typedef *m_sensor);
+#endif /* INC_AHT10_H_ */

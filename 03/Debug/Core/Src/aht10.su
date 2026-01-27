@@ -1,0 +1,5 @@
+aht10.c:15:6:aht10_init	24	static
+aht10.c:22:5:aht10_get_data	40	static
+aht10.c:48:10:read_adc_once	24	static
+aht10.c:63:10:adc_get	24	static
+aht10.c:79:10:moisture_get	40	static

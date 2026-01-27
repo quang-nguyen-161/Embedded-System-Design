@@ -1,0 +1,7 @@
+oled.c:12:6:send_cmd	16	static
+oled.c:20:6:send_data	16	static
+oled.c:28:6:oled_init	8	static
+oled.c:67:6:oled_pos	16	static
+oled.c:78:6:oled_clear	16	static
+oled.c:91:6:oled_print	24	static
+oled.c:105:6:oled_msg	16	static
