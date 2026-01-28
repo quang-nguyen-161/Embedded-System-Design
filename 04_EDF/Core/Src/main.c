@@ -1,52 +1,13 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
-#include "main.h"
 
+#include "main.h"
+#include "cmsis_os.h"
 
 #include <stdint.h>
-#include <stdarg.h>
-#include <stdio.h>
 
 #include "oled.h"
 #include "aht10.h"
+#include "uart_handle.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-sensor_typedef m_sensor;
-uint8_t flag_5s = 0;
-
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
@@ -59,68 +20,38 @@ TIM_HandleTypeDef htim1;
 
 UART_HandleTypeDef huart1;
 
+osThreadId aht10_taskHandle;
+osThreadId soil_taskHandle;
+osThreadId oled_taskHandle;
+osThreadId uart_taskHandle;
+osThreadId edf_scheduleHandle;
+
+osMutexId sensorMutexHandle;
+osMutexId edfMutexHandle;
+
+osSemaphoreId edfSemHandle;
 /* USER CODE BEGIN PV */
-void serial_print(const char *format,...)
-{
-	char buff[128];
-	va_list args;
-	va_start(args, format);
-	int len = vsnprintf(buff, sizeof(buff), format, args);
-	va_end(args);
 
-	if (len > 0) {
-	    if (len > sizeof(buff)) len = sizeof(buff);
-	    HAL_UART_Transmit(&huart1, (uint8_t*)buff, len, 500);
-	}
-}
+#define AHT10_PERIOD 1000
+#define SOIL_PERIOD  2000
+#define OLED_PERIOD  3000
+#define UART_PERIOD  5000
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance == TIM1)
-    {
-    	serial_print("5s interrupt \r\n");
-    	flag_5s  = 1;
-    }
-}
+typedef struct {
+    osThreadId tid;
+    uint32_t period;
+    uint32_t deadline;
+} edf_task_t;
 
-void task_aht10_read()
-{
-	aht10_get_data(&m_sensor);
-}
+#define EDF_PRIO_MAX  osPriorityHigh
+#define EDF_PRIO_MIN  osPriorityBelowNormal
 
-void task_soil_read()
-{
-	moisture_get(4500, 1500, &m_sensor);
-}
 
-void task_oled_display()
-{
-	char oled_buf[32];
+edf_task_t edf_tasks[4];
 
-		  sprintf(oled_buf, "TEMP: %d.%d C", m_sensor.temp/100, m_sensor.temp %100);
-		  oled_msg(3, 20, oled_buf);
-		  sprintf(oled_buf, "HUMID: %d.%d %%", m_sensor.humidity/100, m_sensor.humidity %100);
-		  oled_msg(5, 20, oled_buf);
-		  sprintf(oled_buf, "MOISTURE: %d.%d %%", m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
-		  oled_msg(7, 20, oled_buf);
+/* USER CODE END PV */
 
-}
-
-void task_uart_send()
-{
-	serial_print("TEMP: %d.%d | HUMID: %d.%d | MOISTURE: %d.%d|\r\n",
-			m_sensor.temp/100, m_sensor.temp %100,
-			m_sensor.humidity/100, m_sensor.humidity %100,
-			m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
-}
-
-void task_execute_periodic()
-{
-	task_aht10_read();
-	task_soil_read();
-	task_oled_display();
-	task_uart_send();
-}
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
@@ -128,8 +59,55 @@ static void MX_TIM1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_ADC1_Init(void);
+void aht10_task_start(void const * argument);
+void soil_task_start(void const * argument);
+void oled_task_start(void const * argument);
+void uart_task_start(void const * argument);
+void edf_schedule_start(void const * argument);
 
+/* USER CODE BEGIN PFP */
 
+void edf_schedule(void)
+{
+    // Simple bubble sort by deadline
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = i + 1; j < 4; j++)
+        {
+            if (edf_tasks[j].deadline < edf_tasks[i].deadline)
+            {
+                edf_task_t tmp = edf_tasks[i];
+                edf_tasks[i] = edf_tasks[j];
+                edf_tasks[j] = tmp;
+            }
+        }
+    }
+
+    // Assign priorities
+    for (int i = 0; i < 4; i++)
+    {
+    	osPriority prio = EDF_PRIO_MAX - i;
+    	if (prio < EDF_PRIO_MIN)
+    	    prio = EDF_PRIO_MIN;
+
+    	osThreadSetPriority(edf_tasks[i].tid, prio);
+        ;
+    }
+}
+
+sensor_typedef m_sensor;
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -160,23 +138,78 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim1);
+
   oled_init();
   oled_clear();
 
+  uart_rx_IT();
   /* USER CODE END 2 */
 
+  /* Create the mutex(es) */
+  /* definition and creation of sensorMutex */
+  osMutexDef(sensorMutex);
+  sensorMutexHandle = osMutexCreate(osMutex(sensorMutex));
+
+  osMutexDef(edfMutex);
+  edfMutexHandle = osMutexCreate(osMutex(edfMutex));
+
+  osSemaphoreDef(edfSem);
+  edfSemHandle = osSemaphoreCreate(osSemaphore(edfSem), 1);
+
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of aht10_task */
+  osThreadDef(aht10_task, aht10_task_start, 2, 0, 100);
+  aht10_taskHandle = osThreadCreate(osThread(aht10_task), NULL);
+
+  /* definition and creation of soil_task */
+  osThreadDef(soil_task, soil_task_start, 1, 0, 100);
+  soil_taskHandle = osThreadCreate(osThread(soil_task), NULL);
+
+  /* definition and creation of oled_task */
+  osThreadDef(oled_task, oled_task_start, 0, 0, 100);
+  oled_taskHandle = osThreadCreate(osThread(oled_task), NULL);
+
+  /* definition and creation of uart_task */
+  osThreadDef(uart_task, uart_task_start, -1, 0, 100);
+  uart_taskHandle = osThreadCreate(osThread(uart_task), NULL);
+
+  /* definition and creation of edf_schedule */
+  osThreadDef(edf_schedule, edf_schedule_start, osPriorityRealtime, 0, 100);
+  edf_scheduleHandle = osThreadCreate(osThread(edf_schedule), NULL);
+
+  edf_tasks[0] = (edf_task_t){ aht10_taskHandle, AHT10_PERIOD, 0 };
+  edf_tasks[1] = (edf_task_t){ soil_taskHandle,  SOIL_PERIOD, 0 };
+  edf_tasks[2] = (edf_task_t){ oled_taskHandle,  OLED_PERIOD, 0 };
+  edf_tasks[3] = (edf_task_t){ uart_taskHandle,  UART_PERIOD, 0 };
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE END WHILE */
 
-	  if (flag_5s)
-	  	    {
-	  	        flag_5s = 0;
-	  	        task_execute_periodic();
-	  	    }
-
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -447,6 +480,180 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_aht10_task_start */
+/**
+  * @brief  Function implementing the aht10_task thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_aht10_task_start */
+void aht10_task_start(void const * argument)
+{
+	 uint32_t lastWake = osKernelSysTick();
+	for (;;)
+	{
+	    uint32_t now = osKernelSysTick();
+
+	    osMutexWait(edfMutexHandle, osWaitForever);
+ 	    edf_tasks[0].deadline = now + AHT10_PERIOD;
+  	    osMutexRelease(edfMutexHandle);
+
+	    osMutexWait(sensorMutexHandle, osWaitForever);
+	    serial_print("handle aht10 task\r\n");
+	    aht10_get_data(&m_sensor);
+	    osMutexRelease(sensorMutexHandle);
+
+
+
+
+	    osSemaphoreRelease(edfSemHandle); // báo EDF
+
+	    osDelayUntil(&lastWake, AHT10_PERIOD);
+	}
+
+}
+
+/* USER CODE BEGIN Header_soil_task_start */
+/**
+* @brief Function implementing the soil_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_soil_task_start */
+void soil_task_start(void const * argument)
+{
+    uint32_t lastWake = osKernelSysTick();
+
+    for(;;)
+    {
+    	uint32_t now = osKernelSysTick();
+
+    	osMutexWait(edfMutexHandle, osWaitForever);
+  		edf_tasks[1].deadline = now + SOIL_PERIOD;
+    	osMutexRelease(edfMutexHandle);
+
+    	osMutexWait(sensorMutexHandle, osWaitForever);
+    	serial_print("handle moisture task\r\n");
+    	moisture_get(1500, 4500, &m_sensor);
+    	osMutexRelease(sensorMutexHandle);
+
+
+
+        osSemaphoreRelease(edfSemHandle);
+
+        osDelayUntil(&lastWake, SOIL_PERIOD);
+    }
+}
+
+
+/* USER CODE BEGIN Header_oled_task_start */
+/**
+* @brief Function implementing the oled_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_oled_task_start */
+void oled_task_start(void const * argument)
+{
+    uint32_t lastWake = osKernelSysTick();
+
+    for(;;)
+    {
+    	uint32_t now = osKernelSysTick();
+
+    	osMutexWait(edfMutexHandle, osWaitForever);
+    	edf_tasks[2].deadline = now + OLED_PERIOD;
+    	osMutexRelease(edfMutexHandle);
+
+    	char oled_buf[32];
+
+    	serial_print("handle oled task\r\n");
+
+    	sprintf(oled_buf, "TEMP: %d.%d C", m_sensor.temp/100, m_sensor.temp %100);
+    	oled_msg(3, 20, oled_buf);
+ 	    sprintf(oled_buf, "HUMID: %d.%d %%", m_sensor.humidity/100, m_sensor.humidity %100);
+		oled_msg(5, 20, oled_buf);
+    	sprintf(oled_buf, "MOISTURE: %d.%d %%", m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
+    	oled_msg(7, 20, oled_buf);
+
+    	osSemaphoreRelease(edfSemHandle);
+
+    	osDelayUntil(&lastWake, OLED_PERIOD);
+    }
+}
+
+
+/* USER CODE BEGIN Header_uart_task_start */
+/**
+* @brief Function implementing the uart_task thread.
+* @param argument: Not used
+* @retval None
+*/
+
+
+/* USER CODE BEGIN Header_edf_schedule_start */
+/**
+* @brief Function implementing the edf_schedule thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_edf_schedule_start */
+void uart_task_start(void const * argument)
+{
+    uint32_t lastWake = osKernelSysTick();
+
+    for(;;)
+    {
+    	uint32_t now = osKernelSysTick();
+
+    	osMutexWait(edfMutexHandle, osWaitForever);
+       	edf_tasks[3].deadline = now + UART_PERIOD;
+    	osMutexRelease(edfMutexHandle);
+
+    	serial_print("handle uart task\r\n");
+    	serial_print("TEMP: %d.%d | HUMID: %d.%d | MOISTURE: %d.%d|\r\n",
+    	m_sensor.temp/100, m_sensor.temp %100,
+    	m_sensor.humidity/100, m_sensor.humidity %100,
+    	m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
+
+
+
+    	osSemaphoreRelease(edfSemHandle);
+
+        osDelayUntil(&lastWake, UART_PERIOD);
+    }
+}
+
+void edf_schedule_start(void const *argument)
+{
+    for (;;)
+    {
+    	serial_print("edf schedule\r\n");
+    }
+}
+
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

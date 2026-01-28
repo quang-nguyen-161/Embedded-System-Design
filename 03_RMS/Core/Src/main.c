@@ -428,15 +428,18 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_aht10_task_start */
 void aht10_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
+    	uint32_t lastWake = osKernelSysTick();
+
+    	serial_print("handle task aht\r\n");
         osMutexWait(sensorMutexHandle, osWaitForever);
         aht10_get_data(&m_sensor);
         osMutexRelease(sensorMutexHandle);
 
-        osDelayUntil(&lastWake, AHT10_PERIOD);
+        osDelay(AHT10_PERIOD - (osKernelSysTick() - lastWake));
     }
 }
 
@@ -449,15 +452,18 @@ void aht10_task_start(void const * argument)
 /* USER CODE END Header_soil_task_start */
 void soil_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
+    	uint32_t lastWake = osKernelSysTick();
+
+    	serial_print("handle task soil\r\n");
         osMutexWait(sensorMutexHandle, osWaitForever);
         moisture_get(1500, 4500, &m_sensor);
         osMutexRelease(sensorMutexHandle);
 
-        osDelayUntil(&lastWake, SOIL_PERIOD);
+        osDelay(SOIL_PERIOD - (osKernelSysTick() - lastWake));
     }
 }
 
@@ -471,10 +477,13 @@ void soil_task_start(void const * argument)
 /* USER CODE END Header_oled_task_start */
 void oled_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
+    	uint32_t lastWake = osKernelSysTick();
+
+    	serial_print("handle task oled\r\n");
     	char oled_buf[32];
     	sprintf(oled_buf, "TEMP: %d.%d C", m_sensor.temp/100, m_sensor.temp %100);
     	oled_msg(3, 20, oled_buf);
@@ -483,7 +492,7 @@ void oled_task_start(void const * argument)
     	sprintf(oled_buf, "MOISTURE: %d.%d %%", m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
     	oled_msg(7, 20, oled_buf);
 
-    	osDelayUntil(&lastWake, OLED_PERIOD);
+    	osDelay(OLED_PERIOD - (osKernelSysTick() - lastWake));
     }
 }
 
@@ -497,16 +506,19 @@ void oled_task_start(void const * argument)
 /* USER CODE END Header_uart_task_start */
 void uart_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
+    	uint32_t lastWake = osKernelSysTick();
+
+    	serial_print("handle task uart\r\n");
     	serial_print("TEMP: %d.%d | HUMID: %d.%d | MOISTURE: %d.%d|\r\n",
     	m_sensor.temp/100, m_sensor.temp %100,
     	m_sensor.humidity/100, m_sensor.humidity %100,
     	m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
 
-        osDelayUntil(&lastWake, UART_PERIOD);
+        osDelay(UART_PERIOD - (osKernelSysTick() - lastWake));
     }
 }
 

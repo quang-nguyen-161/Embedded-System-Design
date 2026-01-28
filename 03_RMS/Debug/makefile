@@ -67,8 +67,8 @@ all: main-build
 main-build: 01_simple_periodic.elf secondary-outputs
 
 # Tool invocations
-01_simple_periodic.elf: $(OBJS) $(USER_OBJS) E:\Stuffs\STM32CubeIDE\Embedded_System_Design\04_RMS\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "01_simple_periodic.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Stuffs\STM32CubeIDE\Embedded_System_Design\04_RMS\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="01_simple_periodic.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+01_simple_periodic.elf: $(OBJS) $(USER_OBJS) E:\Stuffs\STM32CubeIDE\Embedded_System_Design\03_RMS\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "01_simple_periodic.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"E:\Stuffs\STM32CubeIDE\Embedded_System_Design\03_RMS\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="01_simple_periodic.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
