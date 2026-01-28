@@ -1,0 +1,14 @@
+main.c:61:5:main	136	static
+main.c:159:6:SystemClock_Config	88	static
+main.c:202:13:MX_ADC1_Init	24	static
+main.c:247:13:MX_I2C1_Init	8	static
+main.c:281:13:MX_SPI1_Init	8	static
+main.c:319:13:MX_TIM1_Init	32	static
+main.c:365:13:MX_USART1_UART_Init	8	static
+main.c:398:13:MX_GPIO_Init	32	static
+main.c:429:6:aht10_task_start	24	static
+main.c:450:6:soil_task_start	24	static
+main.c:472:6:oled_task_start	64	static
+main.c:498:6:uart_task_start	56	static
+main.c:522:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:539:6:Error_Handler	4	static,ignoring_inline_asm
