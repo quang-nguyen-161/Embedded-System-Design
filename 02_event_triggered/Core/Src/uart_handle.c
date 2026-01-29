@@ -51,9 +51,8 @@ void event_queue_push(EventQueue *q, EventType event) {
     }
 }
 
-
 EventType event_queue_pop(EventQueue *q) {
-    if (q->head == q->tail) return EVENT_NONE; // queue rỗng
+    if (q->head == q->tail) return EVENT_NONE;
     EventType event = q->buffer[q->head];
     q->head = (q->head + 1) % EVENT_QUEUE_SIZE;
     return event;

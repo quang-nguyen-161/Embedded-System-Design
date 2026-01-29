@@ -1,6 +1,0 @@
-uart_handle.c:31:6:serial_print	144	static
-uart_handle.c:45:6:event_queue_push	24	static
-uart_handle.c:55:11:event_queue_pop	24	static
-uart_handle.c:62:6:uart_rx_IT	8	static
-uart_handle.c:69:6:HAL_UART_RxCpltCallback	16	static
-uart_handle.c:88:6:uart_rx_process	16	static

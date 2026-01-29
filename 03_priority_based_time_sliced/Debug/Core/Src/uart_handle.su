@@ -1,0 +1,4 @@
+uart_handle.c:23:6:serial_print	144	static
+uart_handle.c:38:6:uart_rx_IT	8	static
+uart_handle.c:45:6:HAL_UART_RxCpltCallback	16	static
+uart_handle.c:64:6:uart_rx_process	152	static
