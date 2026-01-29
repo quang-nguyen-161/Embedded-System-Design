@@ -1783,7 +1783,7 @@ void oled_task_start(void const * argument)
  8000e8c:	08009adc 	.word	0x08009adc
  8000e90:	08009aec 	.word	0x08009aec
  8000e94:	08009afc 	.word	0x08009afc
- 8000e98:	20000008 	.word	0x20000008
+ 8000e98:	2000000c 	.word	0x2000000c
 
 08000e9c <uart_task_start>:
 * @param argument: Not used
@@ -1886,7 +1886,7 @@ void uart_task_start(void const * argument)
  8000f44:	20001150 	.word	0x20001150
  8000f48:	51eb851f 	.word	0x51eb851f
  8000f4c:	08009b24 	.word	0x08009b24
- 8000f50:	2000000c 	.word	0x2000000c
+ 8000f50:	20000008 	.word	0x20000008
 
 08000f54 <HAL_TIM_PeriodElapsedCallback>:
   * a global variable "uwTick" used as application time base.
@@ -3051,10 +3051,10 @@ void uart_rx_process(char *data) {
  8001858:	20000004 	.word	0x20000004
  800185c:	08009b94 	.word	0x08009b94
  8001860:	08009bac 	.word	0x08009bac
- 8001864:	20000008 	.word	0x20000008
+ 8001864:	2000000c 	.word	0x2000000c
  8001868:	08009bc0 	.word	0x08009bc0
  800186c:	08009bd8 	.word	0x08009bd8
- 8001870:	2000000c 	.word	0x2000000c
+ 8001870:	20000008 	.word	0x20000008
  8001874:	08009bec 	.word	0x08009bec
  8001878:	08009c04 	.word	0x08009c04
  800187c:	200010f8 	.word	0x200010f8

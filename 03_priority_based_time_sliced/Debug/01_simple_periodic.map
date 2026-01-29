@@ -5978,12 +5978,12 @@ LOAD e:/stm32cubeide_1.8.0/stm32cubeide/plugins/com.st.stm32cube.ide.mcu.externa
  .data.SOIL_PERIOD
                 0x0000000020000004        0x4 ./Core/Src/main.o
                 0x0000000020000004                SOIL_PERIOD
- .data.OLED_PERIOD
-                0x0000000020000008        0x4 ./Core/Src/main.o
-                0x0000000020000008                OLED_PERIOD
  .data.UART_PERIOD
+                0x0000000020000008        0x4 ./Core/Src/main.o
+                0x0000000020000008                UART_PERIOD
+ .data.OLED_PERIOD
                 0x000000002000000c        0x4 ./Core/Src/main.o
-                0x000000002000000c                UART_PERIOD
+                0x000000002000000c                OLED_PERIOD
  .data.SystemCoreClock
                 0x0000000020000010        0x4 ./Core/Src/system_stm32f1xx.o
                 0x0000000020000010                SystemCoreClock

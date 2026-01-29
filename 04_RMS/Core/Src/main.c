@@ -26,8 +26,8 @@ osMutexId sensorMutexHandle;
 
 uint32_t AHT10_PERIOD = 1000;
 uint32_t SOIL_PERIOD = 2000;
-uint32_t OLED_PERIOD = 5000;
 uint32_t UART_PERIOD = 3000;
+uint32_t OLED_PERIOD = 5000;
 
 /* USER CODE END PV */
 
