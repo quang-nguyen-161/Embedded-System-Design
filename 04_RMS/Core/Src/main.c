@@ -430,8 +430,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_aht10_task_start */
 void aht10_task_start(void const * argument)
 {
-
-
     for(;;)
     {
 

@@ -10,7 +10,7 @@
 #include "uart_handle.h"
 
 sensor_typedef m_sensor;
-volatile uint8_t flag_5s = 0;
+
 
 /* USER CODE END Includes */
 
@@ -58,6 +58,39 @@ typedef struct {
 
 EventQueue uart_event_queue = { .head = 0, .tail = 0 };
 
+uint32_t period = 2000;
+uint8_t period_change = 0;
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	static EventType task = EVENT_OLED;
+    if (htim->Instance == TIM1)
+    {
+    	serial_print("%lu ms interrupt \r\n",period);
+    	task++;
+    	switch (task % 5) {
+    	          case EVENT_UART:
+    	              serial_print("add task UART\r\n");
+    	              event_queue_push(&uart_event_queue, EVENT_UART);
+    	              break;
+    	          case EVENT_OLED:
+    	        	  serial_print("add task OLED\r\n");
+    	        	  event_queue_push(&uart_event_queue, EVENT_OLED);
+    	              break;
+    	          case EVENT_TEMP:
+    	        	  serial_print("add task TEMP\r\n");
+    	        	  event_queue_push(&uart_event_queue, EVENT_TEMP);
+    	              break;
+    	          case EVENT_MOISTURE:
+    	        	  serial_print("add task MOISTURE\r\n");
+    	        	  event_queue_push(&uart_event_queue, EVENT_MOISTURE);
+    	              break;
+    	          default:
+    	              break;
+    	      }
+
+
+    }
+}
 
 
 void task_aht10_read()
@@ -167,6 +200,8 @@ int main(void)
   MX_SPI1_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_TIM_Base_Start_IT(&htim1);
 
   oled_init();
   oled_clear();
@@ -370,7 +405,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 7999;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 4999;
+  htim1.Init.Period = 1999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
