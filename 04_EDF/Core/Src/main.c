@@ -24,18 +24,15 @@ osThreadId aht10_taskHandle;
 osThreadId soil_taskHandle;
 osThreadId oled_taskHandle;
 osThreadId uart_taskHandle;
-osThreadId edf_scheduleHandle;
+
 
 osMutexId sensorMutexHandle;
-osMutexId edfMutexHandle;
-
-osSemaphoreId edfSemHandle;
-/* USER CODE BEGIN PV */
 
 #define AHT10_PERIOD 1000
-#define SOIL_PERIOD  2000
+#define SOIL_PERIOD  1000
 #define OLED_PERIOD  3000
 #define UART_PERIOD  5000
+
 
 typedef struct {
     osThreadId tid;
@@ -63,37 +60,9 @@ void aht10_task_start(void const * argument);
 void soil_task_start(void const * argument);
 void oled_task_start(void const * argument);
 void uart_task_start(void const * argument);
-void edf_schedule_start(void const * argument);
 
-/* USER CODE BEGIN PFP */
 
-void edf_schedule(void)
-{
-    // Simple bubble sort by deadline
-    for (int i = 0; i < 4; i++)
-    {
-        for (int j = i + 1; j < 4; j++)
-        {
-            if (edf_tasks[j].deadline < edf_tasks[i].deadline)
-            {
-                edf_task_t tmp = edf_tasks[i];
-                edf_tasks[i] = edf_tasks[j];
-                edf_tasks[j] = tmp;
-            }
-        }
-    }
 
-    // Assign priorities
-    for (int i = 0; i < 4; i++)
-    {
-    	osPriority prio = EDF_PRIO_MAX - i;
-    	if (prio < EDF_PRIO_MIN)
-    	    prio = EDF_PRIO_MIN;
-
-    	osThreadSetPriority(edf_tasks[i].tid, prio);
-        ;
-    }
-}
 
 sensor_typedef m_sensor;
 
@@ -150,11 +119,8 @@ int main(void)
   osMutexDef(sensorMutex);
   sensorMutexHandle = osMutexCreate(osMutex(sensorMutex));
 
-  osMutexDef(edfMutex);
-  edfMutexHandle = osMutexCreate(osMutex(edfMutex));
 
-  osSemaphoreDef(edfSem);
-  edfSemHandle = osSemaphoreCreate(osSemaphore(edfSem), 1);
+
 
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -175,29 +141,24 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of aht10_task */
-  osThreadDef(aht10_task, aht10_task_start, 2, 0, 100);
+  osThreadDef(aht10_task, aht10_task_start, 1, 0, 128);
   aht10_taskHandle = osThreadCreate(osThread(aht10_task), NULL);
 
   /* definition and creation of soil_task */
-  osThreadDef(soil_task, soil_task_start, 1, 0, 100);
+  osThreadDef(soil_task, soil_task_start, 1, 0, 128);
   soil_taskHandle = osThreadCreate(osThread(soil_task), NULL);
 
   /* definition and creation of oled_task */
-  osThreadDef(oled_task, oled_task_start, 0, 0, 100);
+  osThreadDef(oled_task, oled_task_start, 0, 0, 128);
   oled_taskHandle = osThreadCreate(osThread(oled_task), NULL);
 
   /* definition and creation of uart_task */
-  osThreadDef(uart_task, uart_task_start, -1, 0, 100);
+  osThreadDef(uart_task, uart_task_start, 0, 0, 160);
   uart_taskHandle = osThreadCreate(osThread(uart_task), NULL);
 
-  /* definition and creation of edf_schedule */
-  osThreadDef(edf_schedule, edf_schedule_start, osPriorityRealtime, 0, 100);
-  edf_scheduleHandle = osThreadCreate(osThread(edf_schedule), NULL);
 
-  edf_tasks[0] = (edf_task_t){ aht10_taskHandle, AHT10_PERIOD, 0 };
-  edf_tasks[1] = (edf_task_t){ soil_taskHandle,  SOIL_PERIOD, 0 };
-  edf_tasks[2] = (edf_task_t){ oled_taskHandle,  OLED_PERIOD, 0 };
-  edf_tasks[3] = (edf_task_t){ uart_taskHandle,  UART_PERIOD, 0 };
+
+
 
   /* Start scheduler */
   osKernelStart();
@@ -490,14 +451,12 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_aht10_task_start */
 void aht10_task_start(void const * argument)
 {
-	 uint32_t lastWake = osKernelSysTick();
+
 	for (;;)
 	{
 	    uint32_t now = osKernelSysTick();
 
-	    osMutexWait(edfMutexHandle, osWaitForever);
- 	    edf_tasks[0].deadline = now + AHT10_PERIOD;
-  	    osMutexRelease(edfMutexHandle);
+
 
 	    osMutexWait(sensorMutexHandle, osWaitForever);
 	    serial_print("handle aht10 task\r\n");
@@ -506,10 +465,7 @@ void aht10_task_start(void const * argument)
 
 
 
-
-	    osSemaphoreRelease(edfSemHandle); // báo EDF
-
-	    osDelayUntil(&lastWake, AHT10_PERIOD);
+	    osDelay(AHT10_PERIOD);
 	}
 
 }
@@ -523,26 +479,22 @@ void aht10_task_start(void const * argument)
 /* USER CODE END Header_soil_task_start */
 void soil_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
     	uint32_t now = osKernelSysTick();
 
-    	osMutexWait(edfMutexHandle, osWaitForever);
-  		edf_tasks[1].deadline = now + SOIL_PERIOD;
-    	osMutexRelease(edfMutexHandle);
+
 
     	osMutexWait(sensorMutexHandle, osWaitForever);
-    	serial_print("handle moisture task\r\n");
+    	serial_print("handle soil task\r\n");
     	moisture_get(1500, 4500, &m_sensor);
     	osMutexRelease(sensorMutexHandle);
 
 
 
-        osSemaphoreRelease(edfSemHandle);
-
-        osDelayUntil(&lastWake, SOIL_PERIOD);
+    	osDelay(SOIL_PERIOD);
     }
 }
 
@@ -556,15 +508,12 @@ void soil_task_start(void const * argument)
 /* USER CODE END Header_oled_task_start */
 void oled_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
+
 
     for(;;)
     {
     	uint32_t now = osKernelSysTick();
 
-    	osMutexWait(edfMutexHandle, osWaitForever);
-    	edf_tasks[2].deadline = now + OLED_PERIOD;
-    	osMutexRelease(edfMutexHandle);
 
     	char oled_buf[32];
 
@@ -577,9 +526,9 @@ void oled_task_start(void const * argument)
     	sprintf(oled_buf, "MOISTURE: %d.%d %%", m_sensor.soil_moisture/100, m_sensor.soil_moisture %100);
     	oled_msg(7, 20, oled_buf);
 
-    	osSemaphoreRelease(edfSemHandle);
 
-    	osDelayUntil(&lastWake, OLED_PERIOD);
+
+    	osDelay(OLED_PERIOD);
     }
 }
 
@@ -601,15 +550,11 @@ void oled_task_start(void const * argument)
 /* USER CODE END Header_edf_schedule_start */
 void uart_task_start(void const * argument)
 {
-    uint32_t lastWake = osKernelSysTick();
 
     for(;;)
     {
     	uint32_t now = osKernelSysTick();
 
-    	osMutexWait(edfMutexHandle, osWaitForever);
-       	edf_tasks[3].deadline = now + UART_PERIOD;
-    	osMutexRelease(edfMutexHandle);
 
     	serial_print("handle uart task\r\n");
     	serial_print("TEMP: %d.%d | HUMID: %d.%d | MOISTURE: %d.%d|\r\n",
@@ -619,17 +564,9 @@ void uart_task_start(void const * argument)
 
 
 
-    	osSemaphoreRelease(edfSemHandle);
 
-        osDelayUntil(&lastWake, UART_PERIOD);
-    }
-}
 
-void edf_schedule_start(void const *argument)
-{
-    for (;;)
-    {
-    	serial_print("edf schedule\r\n");
+    	osDelay(UART_PERIOD);
     }
 }
 
@@ -686,4 +623,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-

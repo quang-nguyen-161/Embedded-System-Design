@@ -9,23 +9,15 @@
 
 extern UART_HandleTypeDef huart1;
 
-typedef enum {
-    EVENT_NONE = 0,
-    EVENT_UART,
-    EVENT_OLED,
-    EVENT_TEMP,
-    EVENT_MOISTURE
-} EventType;
+extern uint32_t AHT10_PERIOD;
+extern uint32_t SOIL_PERIOD;
+extern uint32_t OLED_PERIOD;
+extern uint32_t UART_PERIOD;
 
-#define EVENT_QUEUE_SIZE 10
-
-typedef struct {
-    EventType buffer[EVENT_QUEUE_SIZE];
-    uint8_t head;
-    uint8_t tail;
-} EventQueue;
-
-static EventQueue uart_event_queue;
+extern osThreadId aht10_taskHandle;
+extern osThreadId soil_taskHandle;
+extern osThreadId oled_taskHandle;
+extern osThreadId uart_taskHandle;
 
 
 void serial_print(const char *format,...)
@@ -42,22 +34,6 @@ void serial_print(const char *format,...)
 	}
 }
 
-void event_queue_push(EventQueue *q, EventType event) {
-    uint8_t next = (q->tail + 1) % EVENT_QUEUE_SIZE;
-    if (next != q->head)
-    {
-        q->buffer[q->tail] = event;
-        q->tail = next;
-    }
-}
-
-
-EventType event_queue_pop(EventQueue *q) {
-    if (q->head == q->tail) return EVENT_NONE; // queue rỗng
-    EventType event = q->buffer[q->head];
-    q->head = (q->head + 1) % EVENT_QUEUE_SIZE;
-    return event;
-}
 
 void uart_rx_IT() {
     uart_rx_index = 0;
@@ -85,30 +61,33 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     }
 }
 
-void uart_rx_process(char *data)
-{
-	if (strncmp(data, "task: uart.", sizeof("task: uart.") - 1) == 0)
-	{
-		event_queue_push(&uart_event_queue, EVENT_UART);
-		serial_print("Queued: UART event\r\n");
-	}
-	else if (strncmp(data, "task: oled.", sizeof("task: oled.") - 1) == 0)
-	{
-		event_queue_push(&uart_event_queue, EVENT_OLED);
-		serial_print("Queued: OLED event\r\n");
-	}
-	else if (strncmp(data, "task: temp.", sizeof("task: temp.") - 1) == 0)
-	{
-		event_queue_push(&uart_event_queue, EVENT_TEMP);
-		serial_print("Queued: TEMP event\r\n");
-	}
-	else if (strncmp(data, "task: moist.", sizeof("task: moist.") - 1) == 0)
-	{
-		event_queue_push(&uart_event_queue, EVENT_MOISTURE);
-		serial_print("Queued: MOISTURE event\r\n");
-	}
-	else
-	{
-		serial_print("Invalid command format\r\n");
-	}
+// Hàm xử lý dữ liệu nhận được và đẩy vào queue
+void uart_rx_process(char *data) {
+	 uint32_t value;
+	 char buffer[64];
+
+	    if (sscanf(data, "Change_DHT: %lu.", &value) == 1) {
+	        AHT10_PERIOD = value;
+	        serial_print("Changed DHT delay!\r\n");
+    } else if (sscanf(data, "Change_SOIL: %lu.", &value) == 1) {
+    	SOIL_PERIOD = value;
+    	serial_print("Changed SOIL delay!\r\n");
+    } else if (sscanf(data, "Change_OLED: %lu.", &value) == 1) {
+    	OLED_PERIOD = value;
+    	serial_print("Changed OLED delay!\r\n");
+    } else if (sscanf(data, "Change_UART: %lu.", &value) == 1) {
+    	UART_PERIOD = value;
+    	serial_print("Changed UART delay!\r\n");
+    }
+    else if (strncmp(data, "GetPriority.", 12) == 0) {
+            // Lấy mức ưu tiên các task
+            serial_print("AHT: %d\r\n", osThreadGetPriority(aht10_taskHandle));
+            serial_print("SOIL: %d\r\n", osThreadGetPriority(soil_taskHandle));
+            serial_print("OLED: %d\r\n", osThreadGetPriority(oled_taskHandle));
+            serial_print("UART: %d\r\n", osThreadGetPriority(uart_taskHandle));
+        }
+
+	    else {
+        serial_print("Invalid command format.\r\n");
+    }
 }

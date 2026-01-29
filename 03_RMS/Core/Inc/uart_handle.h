@@ -9,6 +9,7 @@
 #define INC_UART_HANDLE_H_
 
 #include "main.h"
+#include "cmsis_os.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
