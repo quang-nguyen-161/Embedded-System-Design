@@ -1,36 +1,23 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
 
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
-
+#include <string.h>
 #include "oled.h"
 #include "aht10.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 sensor_typedef m_sensor;
-uint8_t flag_5s = 0;
+volatile uint8_t flag = 0;
+volatile uint32_t period;
+
+#define UART_RX_BUFFER_SIZE 128
+static uint8_t uart_rx_buffer[UART_RX_BUFFER_SIZE];
+static uint8_t uart_rx_data;
+static uint16_t uart_rx_index = 0;
 
 /* USER CODE END Includes */
 
@@ -60,6 +47,18 @@ TIM_HandleTypeDef htim1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_ADC1_Init(void);
+
 void serial_print(const char *format,...)
 {
 	char buff[128];
@@ -74,12 +73,67 @@ void serial_print(const char *format,...)
 	}
 }
 
+void uart_rx_IT() {
+    uart_rx_index = 0;
+    memset(uart_rx_buffer, 0, UART_RX_BUFFER_SIZE);
+    HAL_UART_Receive_IT(&huart1, &uart_rx_data, 1);
+}
+
+void TIM1_SetPeriod(uint32_t period_ms)
+{
+    uint32_t psc = 7999;
+    uint32_t arr = period_ms - 1;
+
+    HAL_TIM_Base_Stop_IT(&htim1);
+
+    __HAL_TIM_SET_PRESCALER(&htim1, psc);
+    __HAL_TIM_SET_AUTORELOAD(&htim1, arr);
+    __HAL_TIM_SET_COUNTER(&htim1, 0);
+
+    HAL_TIM_Base_Start_IT(&htim1);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) {
+        if (uart_rx_index < UART_RX_BUFFER_SIZE - 1) {
+            uart_rx_buffer[uart_rx_index++] = uart_rx_data;
+
+            if (uart_rx_data == '.') {
+                uart_rx_buffer[uart_rx_index] = '\0';
+                uart_rx_process((char *)uart_rx_buffer);
+                uart_rx_index = 0;
+                memset(uart_rx_buffer, 0, UART_RX_BUFFER_SIZE);
+            }
+        } else {
+            uart_rx_index = 0;
+        }
+
+        HAL_UART_Receive_IT(&huart1, &uart_rx_data, 1);
+    }
+}
+
+void uart_rx_process(char *data)
+{
+	uint32_t value;
+
+	if (sscanf(data, "change_period: %lu.", &value) == 1)
+		    	{
+		    	    TIM1_SetPeriod(value);
+		    	    period = value;
+		    	    serial_print("period = %lu ms\r\n", value);
+		    	}
+
+	else
+	{
+		serial_print("Invalid command format\r\n");
+	}
+}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM1)
     {
-    	serial_print("5s interrupt \r\n");
-    	flag_5s  = 1;
+    	serial_print("%lu ms interrupt \r\n", period);
+    	flag  = 1;
     }
 }
 
@@ -121,14 +175,6 @@ void task_execute_periodic()
 	task_oled_display();
 	task_uart_send();
 }
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_TIM1_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_SPI1_Init(void);
-static void MX_ADC1_Init(void);
-
 
 int main(void)
 {
@@ -170,13 +216,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE END WHILE */
+	  if (flag)
+	  	  	    {
+	  	  	        flag = 0;
+	  	  	        task_execute_periodic();
+	  	  	    }
 
-	  if (flag_5s)
-	  	    {
-	  	        flag_5s = 0;
-	  	        task_execute_periodic();
-	  	    }
-
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
