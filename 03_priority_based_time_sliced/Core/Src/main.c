@@ -142,19 +142,19 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of aht10_task */
-  osThreadDef(aht10_task, aht10_task_start, 1, 0, 128);
+  osThreadDef(aht10_task, aht10_task_start, osPriorityAboveNormal, 0, 128);
   aht10_taskHandle = osThreadCreate(osThread(aht10_task), NULL);
 
   /* definition and creation of soil_task */
-  osThreadDef(soil_task, soil_task_start, 1, 0, 128);
+  osThreadDef(soil_task, soil_task_start, osPriorityAboveNormal, 0, 128);
   soil_taskHandle = osThreadCreate(osThread(soil_task), NULL);
 
   /* definition and creation of oled_task */
-  osThreadDef(oled_task, oled_task_start, 0, 0, 128);
+  osThreadDef(oled_task, oled_task_start, osPriorityNormal, 0, 128);
   oled_taskHandle = osThreadCreate(osThread(oled_task), NULL);
 
   /* definition and creation of uart_task */
-  osThreadDef(uart_task, uart_task_start, 0, 0, 160);
+  osThreadDef(uart_task, uart_task_start, osPriorityNormal, 0, 160);
   uart_taskHandle = osThreadCreate(osThread(uart_task), NULL);
 
 

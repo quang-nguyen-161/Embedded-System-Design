@@ -12,7 +12,7 @@
 /* USER CODE BEGIN Includes */
 sensor_typedef m_sensor;
 volatile uint8_t flag = 0;
-volatile uint32_t period;
+volatile uint32_t period = 5000;
 
 #define UART_RX_BUFFER_SIZE 128
 static uint8_t uart_rx_buffer[UART_RX_BUFFER_SIZE];
@@ -139,16 +139,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void task_aht10_read()
 {
+	serial_print("handle task aht\r\n");
 	aht10_get_data(&m_sensor);
 }
 
 void task_soil_read()
 {
+	serial_print("handle task soil\r\n");
 	moisture_get(4500, 1500, &m_sensor);
 }
 
 void task_oled_display()
 {
+	serial_print("handle task oled\r\n");
 	char oled_buf[32];
 
 		  sprintf(oled_buf, "TEMP: %d.%d C", m_sensor.temp/100, m_sensor.temp %100);
@@ -162,6 +165,7 @@ void task_oled_display()
 
 void task_uart_send()
 {
+	serial_print("handle task uart\r\n");
 	serial_print("TEMP: %d.%d | HUMID: %d.%d | MOISTURE: %d.%d|\r\n",
 			m_sensor.temp/100, m_sensor.temp %100,
 			m_sensor.humidity/100, m_sensor.humidity %100,
@@ -210,6 +214,7 @@ int main(void)
   oled_init();
   oled_clear();
 
+  uart_rx_IT();
   /* USER CODE END 2 */
 
   /* Infinite loop */

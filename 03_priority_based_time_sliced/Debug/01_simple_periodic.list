@@ -859,7 +859,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of aht10_task */
-  osThreadDef(aht10_task, aht10_task_start, 1, 0, 128);
+  osThreadDef(aht10_task, aht10_task_start, osPriorityAboveNormal, 0, 128);
  80008f6:	4b27      	ldr	r3, [pc, #156]	; (8000994 <main+0xe8>)
  80008f8:	f107 0454 	add.w	r4, r7, #84	; 0x54
  80008fc:	461d      	mov	r5, r3
@@ -877,7 +877,7 @@ int main(void)
  800091a:	6013      	str	r3, [r2, #0]
 
   /* definition and creation of soil_task */
-  osThreadDef(soil_task, soil_task_start, 1, 0, 128);
+  osThreadDef(soil_task, soil_task_start, osPriorityAboveNormal, 0, 128);
  800091c:	4b1f      	ldr	r3, [pc, #124]	; (800099c <main+0xf0>)
  800091e:	f107 0438 	add.w	r4, r7, #56	; 0x38
  8000922:	461d      	mov	r5, r3
@@ -895,7 +895,7 @@ int main(void)
  8000940:	6013      	str	r3, [r2, #0]
 
   /* definition and creation of oled_task */
-  osThreadDef(oled_task, oled_task_start, 0, 0, 128);
+  osThreadDef(oled_task, oled_task_start, osPriorityNormal, 0, 128);
  8000942:	4b18      	ldr	r3, [pc, #96]	; (80009a4 <main+0xf8>)
  8000944:	f107 041c 	add.w	r4, r7, #28
  8000948:	461d      	mov	r5, r3
@@ -913,7 +913,7 @@ int main(void)
  8000966:	6013      	str	r3, [r2, #0]
 
   /* definition and creation of uart_task */
-  osThreadDef(uart_task, uart_task_start, 0, 0, 160);
+  osThreadDef(uart_task, uart_task_start, osPriorityNormal, 0, 160);
  8000968:	4b10      	ldr	r3, [pc, #64]	; (80009ac <main+0x100>)
  800096a:	463c      	mov	r4, r7
  800096c:	461d      	mov	r5, r3

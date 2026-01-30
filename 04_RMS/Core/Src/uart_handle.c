@@ -79,7 +79,7 @@ void uart_rx_process(char *data) {
     	serial_print("Changed UART delay!\r\n");
     }
     else if (strncmp(data, "GetPriority.", 12) == 0) {
-            // Lấy mức ưu tiên các task
+
             serial_print("AHT: %d\r\n", osThreadGetPriority(aht10_taskHandle));
             serial_print("SOIL: %d\r\n", osThreadGetPriority(soil_taskHandle));
             serial_print("OLED: %d\r\n", osThreadGetPriority(oled_taskHandle));

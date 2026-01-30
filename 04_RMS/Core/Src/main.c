@@ -99,6 +99,8 @@ int main(void)
   /* definition and creation of sensorMutex */
   osMutexDef(sensorMutex);
   sensorMutexHandle = osMutexCreate(osMutex(sensorMutex));
+  sensor_typedef m_sensor;
+
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
